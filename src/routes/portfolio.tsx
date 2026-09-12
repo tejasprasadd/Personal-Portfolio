@@ -29,11 +29,11 @@ export const Route = createFileRoute("/portfolio")({
       { property: "og:type", content: "profile" },
       {
         property: "og:url",
-        content: "https://tejas-playground.amused-tulip-4562.chatgpt.site/portfolio",
+        content: "https://tejas-playground.tejasprasad43.chatgpt.site/portfolio",
       },
       {
         property: "og:image",
-        content: "https://tejas-playground.amused-tulip-4562.chatgpt.site/og-preview.jpg",
+        content: "https://tejas-playground.tejasprasad43.chatgpt.site/og-preview.jpg",
       },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Portfolio — Projects & Experience | B R Tejas Prasad" },
@@ -44,13 +44,13 @@ export const Route = createFileRoute("/portfolio")({
       },
       {
         name: "twitter:image",
-        content: "https://tejas-playground.amused-tulip-4562.chatgpt.site/og-preview.jpg",
+        content: "https://tejas-playground.tejasprasad43.chatgpt.site/og-preview.jpg",
       },
     ],
     links: [
       {
         rel: "canonical",
-        href: "https://tejas-playground.amused-tulip-4562.chatgpt.site/portfolio",
+        href: "https://tejas-playground.tejasprasad43.chatgpt.site/portfolio",
       },
     ],
   }),

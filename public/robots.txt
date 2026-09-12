@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://tejas-playground.amused-tulip-4562.chatgpt.site/sitemap.xml
+Sitemap: https://tejas-playground.tejasprasad43.chatgpt.site/sitemap.xml

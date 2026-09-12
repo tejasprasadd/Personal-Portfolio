@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
-const BASE_URL = "https://tejas-playground.amused-tulip-4562.chatgpt.site";
+const BASE_URL = "https://tejas-playground.tejasprasad43.chatgpt.site";
 
 interface SitemapEntry {
   path: string;

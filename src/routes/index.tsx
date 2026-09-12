@@ -35,7 +35,7 @@ const Scene = lazy(() => import("@/components/3d/Scene"));
 const DESCRIPTION =
   "Interactive portfolio of B R Tejas Prasad, an AI-focused Software Engineer building full-stack applications, AI agents, RAG systems, document intelligence platforms, and scalable software systems.";
 
-const SITE = "https://tejas-playground.amused-tulip-4562.chatgpt.site";
+const SITE = "https://tejas-playground.tejasprasad43.chatgpt.site";
 const OG_IMAGE = `${SITE}/og-preview.jpg`;
 
 export const Route = createFileRoute("/")({

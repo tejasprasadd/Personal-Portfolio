@@ -1,6 +1,6 @@
 # Tejas — An engineer’s playground
 
-Public Site: https://tejas-playground.amused-tulip-4562.chatgpt.site
+Public Site: https://tejas-playground.tejasprasad43.chatgpt.site
 
 ## Audit and design
 
