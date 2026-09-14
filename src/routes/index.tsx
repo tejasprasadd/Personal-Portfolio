@@ -12,6 +12,8 @@ import {
   X,
   Compass,
   MoveUpRight,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { MotionConfig } from "motion/react";
 import { PROFILE, PROJECTS } from "@/data/portfolio";
@@ -27,7 +29,8 @@ import { IslandFallback } from "@/components/playground/IslandFallback";
 import { SceneBoundary } from "@/components/playground/SceneBoundary";
 import { useDeviceCapabilities } from "@/hooks/useDeviceCapabilities";
 import { useSettings } from "@/hooks/useSettings";
-import { useGameControls } from "@/hooks/useGameControls";
+import { useGameControls, clearDrivingControls } from "@/hooks/useGameControls";
+import { activateDrivingAudio } from "@/lib/drivingAudio";
 import { useAchievements } from "@/hooks/useAchievements";
 import { seedTier, useQualityScaler } from "@/hooks/useQualityScaler";
 import { RESUME_URL, RESUME_FILENAME } from "@/lib/resume";
@@ -81,7 +84,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const caps = useDeviceCapabilities(),
-    { settings, update } = useSettings();
+    { settings, update, timeOfDay, audioError } = useSettings();
   const [exploring, setExploring] = useState(false),
     [optIn, setOptIn] = useState(false),
     [failed, setFailed] = useState(false),
@@ -148,10 +151,19 @@ function Index() {
     },
     [unlock],
   );
-  const reset = () => {
+  const reset = useCallback(() => {
+    clearDrivingControls();
     setResetKey((k) => k + 1);
+    setNearZone(null);
+    setTelemetry({ speed: 0, x: 0, z: 18, airborne: false });
+    setOpenZone(null);
+    setHelp(false);
+    setConfig(false);
     toast("Back on the road. Props reset, too.");
-  };
+  }, [toast]);
+  useEffect(() => {
+    if (audioError) toast(audioError);
+  }, [audioError, toast]);
   const busy = !!openZone || help || config;
   useGameControls({
     enabled: exploring && !busy,
@@ -166,6 +178,7 @@ function Index() {
   });
   const can3D = caps.ready && caps.webgl && !failed && (!caps.lowPower || optIn);
   const start = () => {
+    if (settings.sound || settings.music) void activateDrivingAudio();
     if (!can3D) {
       setOptIn(true);
       return;
@@ -176,7 +189,7 @@ function Index() {
   const near = ZONES.find((z) => z.id === nearZone);
   return (
     <MotionConfig reducedMotion="user">
-      <div className={`playground ${exploring ? "is-exploring" : ""}`}>
+      <div className={`playground ${exploring ? "is-exploring" : ""}`} data-island-time={timeOfDay}>
         <a className="skip-link" href="/portfolio">
           Skip to standard portfolio
         </a>
@@ -206,8 +219,11 @@ function Index() {
         <section ref={hero} className="hero" aria-label="An engineer’s playground">
           <div className="scene-stage">
             {can3D ? (
-              <SceneBoundary fallback={<IslandFallback />} onFailure={onFailure}>
-                <Suspense fallback={<IslandFallback />}>
+              <SceneBoundary
+                fallback={<IslandFallback timeOfDay={timeOfDay} />}
+                onFailure={onFailure}
+              >
+                <Suspense fallback={<IslandFallback timeOfDay={timeOfDay} />}>
                   <Scene
                     quality={settings.quality === "auto" ? auto.tier : settings.quality}
                     reduceMotion={settings.reduceMotion}
@@ -216,6 +232,8 @@ function Index() {
                     paused={busy || (!inView && !exploring)}
                     sound={settings.sound}
                     music={settings.music}
+                    timeOfDay={timeOfDay}
+                    onReset={reset}
                     activeZone={nearZone}
                     onNearZone={setNearZone}
                     onSelectZone={openPanel}
@@ -227,7 +245,7 @@ function Index() {
                 </Suspense>
               </SceneBoundary>
             ) : (
-              <IslandFallback />
+              <IslandFallback timeOfDay={timeOfDay} />
             )}
           </div>
           {!exploring && (
@@ -256,7 +274,7 @@ function Index() {
                     {can3D
                       ? ready
                         ? "Take a little drive"
-                        : "Preparing your rover…"
+                        : "Preparing your jeep…"
                       : "Try the 3D experience"}
                     <ArrowRight size={17} />
                   </button>
@@ -305,12 +323,27 @@ function Index() {
               </div>
               <div className="drive-tools">
                 <button
+                  aria-label={
+                    timeOfDay === "night" ? "Switch island to day" : "Switch island to night"
+                  }
+                  title={timeOfDay === "night" ? "Switch to day" : "Switch to night"}
+                  onClick={() => update({ timeOfDay: timeOfDay === "night" ? "day" : "night" })}
+                >
+                  {timeOfDay === "night" ? <Sun /> : <Moon />}
+                </button>
+                <button
                   aria-label={settings.sound ? "Mute sound" : "Enable sound"}
+                  aria-pressed={settings.sound}
+                  title={settings.sound ? "Mute sound (M)" : "Enable sound (M)"}
                   onClick={() => update({ sound: !settings.sound })}
                 >
                   {settings.sound ? <Volume2 /> : <VolumeX />}
                 </button>
-                <button aria-label="Reset rover and props" onClick={reset}>
+                <button
+                  aria-label="Reset jeep and props"
+                  title="Reset jeep and props (R)"
+                  onClick={reset}
+                >
                   <RotateCcw />
                 </button>
                 <button aria-label="Help and controls" onClick={() => setHelp(true)}>

@@ -34,6 +34,11 @@ export const controls: ControlState = {
   handbrake: false,
 };
 
+export function clearDrivingControls() {
+  Object.assign(controls, { forward: 0, turn: 0, jump: false, boost: false, handbrake: false });
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("driving-reset"));
+}
+
 export function useGameControls(opts: {
   enabled: boolean;
   onInteract: () => void;
@@ -79,6 +84,7 @@ export function useGameControls(opts: {
         return;
       }
       if (e.code === "KeyM") {
+        if (e.repeat) return;
         ref.current.onToggleMute();
         return;
       }
@@ -91,6 +97,8 @@ export function useGameControls(opts: {
         return;
       }
       if (e.code === "KeyR") {
+        if (e.repeat) return;
+        e.preventDefault();
         ref.current.onReset();
         return;
       }
@@ -108,11 +116,13 @@ export function useGameControls(opts: {
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     window.addEventListener("blur", clear);
+    window.addEventListener("driving-reset", clear);
     document.addEventListener("visibilitychange", clear);
     return () => {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", clear);
+      window.removeEventListener("driving-reset", clear);
       document.removeEventListener("visibilitychange", clear);
       clear();
     };

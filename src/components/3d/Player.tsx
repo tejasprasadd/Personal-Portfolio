@@ -9,7 +9,9 @@ import {
 } from "@react-three/rapier";
 import type { DynamicRayCastVehicleController } from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
-import { createRoverController, driveRover, ROVER } from "./vehiclePhysics";
+import { createRoverController, driveRover, ROVER, CHASSIS, resetBody } from "./vehiclePhysics";
+import type { Quality } from "@/hooks/useSettings";
+import type { TimeOfDay } from "@/lib/timeOfDay";
 import { controls } from "@/hooks/useGameControls";
 import {
   JeepBody,
@@ -57,17 +59,18 @@ const WHEEL_RADIUS = ROVER.wheelRadius;
 const HALF_TRACK = MODEL_HALF_TRACK;
 const HALF_BASE = MODEL_HALF_BASE;
 /** Where the suspension is bolted to the chassis, in chassis space. */
-const CONNECT_Y = 0.38;
+const CONNECT_Y = ROVER.connectY;
 /** Spring rest length: how far the wheel hangs below its mount at rest. */
-const SUSP_REST = 0.55;
+const SUSP_REST = ROVER.suspensionRest;
 /** Long-travel offroad springs. */
-const SUSP_TRAVEL = 0.55;
+const SUSP_TRAVEL = ROVER.suspensionTravel;
 const SUSP_STIFFNESS = 24;
 const SUSP_COMPRESSION = 2.4;
 const SUSP_RELAX = 3.6;
 const MAX_SUSP_FORCE = 30000;
 /** Model root sits on the ground plane at rest. */
-const BODY_Y = CONNECT_Y - SUSP_REST - WHEEL_RADIUS + 1.02;
+// Allow for spring compression at rest so the model arches centre on the tyres.
+const BODY_Y = CONNECT_Y - SUSP_REST + 0.14;
 
 /** Chassis mass (kg-ish) — everything else is scaled off it. */
 const MASS = ROVER.mass;
@@ -120,12 +123,12 @@ function VehicleRig({
     const v = createRoverController(world, rb);
     vehicle.current = v;
     return () => {
-      vehicle.current = null;
       try {
-        world.removeVehicleController(v);
+        if (vehicle.current) world.removeVehicleController(vehicle.current);
       } catch {
         /* world already torn down */
       }
+      vehicle.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world]);
@@ -141,17 +144,23 @@ export function Jeep({
   state,
   resetKey,
   reduceMotion,
+  timeOfDay,
+  quality,
+  onReset,
 }: {
   state: PlayerState;
   resetKey: number;
   reduceMotion: boolean;
+  timeOfDay: TimeOfDay;
+  quality: Quality;
+  onReset: () => void;
 }) {
+  const { world } = useRapier();
   const chassis = useRef<RapierRigidBody>(null);
   const vehicle = useRef<DynamicRayCastVehicleController | null>(null);
 
   const wheelRefs = useRef<(THREE.Group | null)[]>([null, null, null, null]);
   const tyreRefs = useRef<(THREE.Group | null)[]>([null, null, null, null]);
-  const brakeLight = useRef<THREE.MeshStandardMaterial>(null);
 
   const skid = useRef<SkidHandle | null>(null);
   const dust = useRef<DustHandle | null>(null);
@@ -165,6 +174,44 @@ export function Jeep({
   const upsideDown = useRef(0);
   const jumpLock = useRef(false);
   const prevSpeed = useRef(0);
+  const recoveryPending = useRef(false);
+  const lastReset = useRef(resetKey);
+
+  useEffect(() => {
+    if (lastReset.current === resetKey || !chassis.current) return;
+    lastReset.current = resetKey;
+    // The body stays registered; replacing only the controller clears cached suspension/speed.
+    if (vehicle.current) world.removeVehicleController(vehicle.current);
+    resetBody(chassis.current);
+    vehicle.current = createRoverController(world, chassis.current);
+    steer.current =
+      skidTimer.current =
+      dustTimer.current =
+      airTime.current =
+      upsideDown.current =
+      prevSpeed.current =
+        0;
+    wasAirborne.current = jumpLock.current = recoveryPending.current = false;
+    state.position.set(0, 1.25, 18);
+    Object.assign(state, {
+      heading: Math.PI,
+      speed: 0,
+      airborne: false,
+      inWater: false,
+      impact: 0,
+      rpm: 0.16,
+      gear: 1,
+      damage: 0,
+      suspension: [0, 0, 0, 0],
+    });
+    wheelRefs.current.forEach((wheel, i) => {
+      if (wheel) {
+        wheel.position.set(WHEEL_ANCHORS[i]![0], CONNECT_Y - SUSP_REST, WHEEL_ANCHORS[i]![1]);
+        wheel.rotation.set(0, 0, 0);
+      }
+    });
+    tyreRefs.current.forEach((wheel) => wheel?.rotation.set(0, 0, 0));
+  }, [resetKey, state, world]);
 
   const q = useMemo(() => new THREE.Quaternion(), []);
   const euler = useMemo(() => new THREE.Euler(0, 0, 0, "YXZ"), []);
@@ -173,7 +220,7 @@ export function Jeep({
   useBeforePhysicsStep((world) => {
     const rb = chassis.current;
     const v = vehicle.current;
-    if (!rb || !v) return;
+    if (!rb || !v || recoveryPending.current) return;
     const dt = world.timestep;
 
     const drive = driveRover(v, controls, dt, steer.current);
@@ -254,21 +301,17 @@ export function Jeep({
     if (up.y < 0.15 && absSpeed < 2) upsideDown.current += dt;
     else upsideDown.current = 0;
     if (upsideDown.current > 2.5) {
-      upsideDown.current = 0;
-      const ground = heightAt(t.x, t.z) + WHEEL_RADIUS + SUSP_REST + 1;
-      rb.setTranslation({ x: t.x, y: ground, z: t.z }, true);
-      const flat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, euler.y, 0));
-      rb.setRotation({ x: flat.x, y: flat.y, z: flat.z, w: flat.w }, true);
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      recoveryPending.current = true;
+      onReset();
+      return;
     }
 
     // Recover from the island edge; no invisible boundary walls.
-    if (t.y < -8 || Math.hypot(t.x, t.z) > 58) {
-      rb.setTranslation({ x: SPAWN[0], y: spawnY(), z: SPAWN[2] }, true);
-      rb.setRotation({ x: 0, y: 1, z: 0, w: 0 }, true);
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    if (t.y < -3 || Math.hypot(t.x, t.z) > 53) {
+      state.inWater = true;
+      recoveryPending.current = true;
+      onReset();
+      return;
     }
 
     // ---- wheel visuals: real suspension travel + spin -----------------------
@@ -360,28 +403,18 @@ export function Jeep({
         }
       }
     }
-
-    if (brakeLight.current) {
-      const on = controls.forward < 0 || handbrake;
-      brakeLight.current.emissiveIntensity = THREE.MathUtils.lerp(
-        brakeLight.current.emissiveIntensity,
-        on ? 3 : 0.4,
-        0.2,
-      );
-    }
   });
 
   return (
     <>
       {!reduceMotion && (
-        <>
+        <group key={resetKey}>
           <SkidMarks handle={skid} />
           <Dust handle={dust} />
           <Debris handle={debris} />
-        </>
+        </group>
       )}
       <RigidBody
-        key={resetKey}
         ref={chassis}
         type="dynamic"
         position={[SPAWN[0], spawnY(), SPAWN[2]]}
@@ -394,11 +427,17 @@ export function Jeep({
       >
         {/* chassis: mass sits low and slightly rearward for stability */}
         <CuboidCollider
-          args={[0.95, 0.45, 1.6]}
-          position={[0, 0.35, -0.1]}
+          args={CHASSIS.halfExtents}
+          position={CHASSIS.position}
           mass={MASS}
           friction={0.6}
           restitution={0.05}
+        />
+        <CuboidCollider
+          args={[0.81, 0.43, 1.15]}
+          position={[0, 0.92, -0.55]}
+          mass={0}
+          friction={0.3}
         />
 
         <VehicleRig chassis={chassis} vehicle={vehicle} />
@@ -448,27 +487,7 @@ export function Jeep({
         ))}
 
         <group position={[0, BODY_Y, 0]}>
-          <JeepBody />
-          {/* brake bar */}
-          <mesh position={[0, 1.05, -2.2]}>
-            <boxGeometry args={[1.5, 0.14, 0.07]} />
-            <meshStandardMaterial
-              ref={brakeLight}
-              color="#7F1D1D"
-              emissive="#EF4444"
-              emissiveIntensity={0.4}
-            />
-          </mesh>
-          {/* Headlights use emissive materials without an extra per-pixel light. */}
-          {/* <spotLight
-            position={[0, 1.2, 2.2]}
-            target-position={[0, 0, 16]}
-            angle={0.6}
-            penumbra={0.6}
-            intensity={16}
-            distance={26}
-            color="#FFE9B0"
-          /> */}
+          <JeepBody timeOfDay={timeOfDay} quality={quality} />
         </group>
       </RigidBody>
     </>

@@ -38,9 +38,11 @@ export function MobileControls({ onInteract }: { onInteract: () => void }) {
     };
     document.addEventListener("visibilitychange", clear);
     window.addEventListener("blur", clear);
+    window.addEventListener("driving-reset", clear);
     return () => {
       document.removeEventListener("visibilitychange", clear);
       window.removeEventListener("blur", clear);
+      window.removeEventListener("driving-reset", clear);
       clear();
     };
   }, []);

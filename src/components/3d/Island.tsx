@@ -1,26 +1,42 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { CuboidCollider, CylinderCollider, RigidBody } from "@react-three/rapier";
+import {
+  ConvexHullCollider,
+  CuboidCollider,
+  CylinderCollider,
+  RigidBody,
+  type RapierRigidBody,
+} from "@react-three/rapier";
 import * as THREE from "three";
 import { ZONES, type ZoneId, type Zone } from "./zones";
 import type { Quality } from "@/hooks/useSettings";
+import type { TimeOfDay } from "@/lib/timeOfDay";
+import { resetBody } from "./vehiclePhysics";
+import { RAMP_POSITION, RAMP_VERTICES, RAMP_INDICES } from "./ramp";
 
 function Box({
   position = [0, 0, 0],
   size,
   color,
   rotation = [0, 0, 0],
+  emissive = false,
 }: {
   position?: [number, number, number];
   size: [number, number, number];
   color: string;
   rotation?: [number, number, number];
+  emissive?: boolean;
 }) {
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <boxGeometry args={size} />
-      <meshStandardMaterial color={color} roughness={0.8} />
+      <meshStandardMaterial
+        color={color}
+        roughness={0.8}
+        emissive={emissive ? "#ffcc81" : "#000000"}
+        emissiveIntensity={emissive ? 1.1 : 0}
+      />
     </mesh>
   );
 }
@@ -106,11 +122,13 @@ function Landmark({
   active,
   onSelect,
   reduceMotion,
+  timeOfDay,
 }: {
   zone: Zone;
   active: boolean;
   onSelect: (id: ZoneId) => void;
   reduceMotion: boolean;
+  timeOfDay: TimeOfDay;
 }) {
   const spin = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
@@ -124,7 +142,12 @@ function Landmark({
         <Box position={[0, 0.25, 0]} size={[5, 0.5, 4.5]} color="#f1e6c8" />
         <Box position={[0, 1.3, 0]} size={[4.2, 1.8, 3.6]} color={zone.color} />
         <Box position={[0, 2.3, 0]} size={[4.7, 0.25, 4.1]} color="#f7ebd1" />
-        <Box position={[0, 1.45, 1.83]} size={[2.7, 1, 0.06]} color="#2c5250" />
+        <Box
+          position={[0, 1.45, 1.83]}
+          size={[2.7, 1, 0.06]}
+          color={timeOfDay === "night" ? "#deb777" : "#2c5250"}
+          emissive={timeOfDay === "night"}
+        />
         {[-1, 0, 1].map((x) => (
           <Box key={x} position={[x, 1.5, 1.88]} size={[0.06, 0.9, 0.08]} color="#e8dbc0" />
         ))}
@@ -187,13 +210,27 @@ function Landmark({
   );
 }
 function PlayObjects({ resetKey }: { resetKey: number }) {
+  const bodies = useRef<(RapierRigidBody | null)[]>([]);
+  useEffect(() => {
+    bodies.current.forEach((body, i) => {
+      if (!body) return;
+      const p =
+        i < 9
+          ? { x: 12 + (i % 3) * 1.8, y: 1 + Math.floor(i / 3) * 1.55, z: 8 }
+          : { x: -12 + (i - 9) * 1.5, y: 1.5, z: 9 };
+      resetBody(body, p, 0);
+    });
+  }, [resetKey]);
   return (
-    <group key={resetKey}>
+    <group>
       {Array.from({ length: 9 }, (_, i) => (
         <RigidBody
           key={i}
+          ref={(body) => {
+            bodies.current[i] = body;
+          }}
           colliders="cuboid"
-          position={[12 + (i % 3) * 1.8, 1 + Math.floor(i / 3) * 1.55, 5]}
+          position={[12 + (i % 3) * 1.8, 1 + Math.floor(i / 3) * 1.55, 8]}
           mass={18}
           friction={0.75}
           restitution={0.12}
@@ -206,6 +243,9 @@ function PlayObjects({ resetKey }: { resetKey: number }) {
       {[0, 1, 2, 3, 4].map((i) => (
         <RigidBody
           key={`ball${i}`}
+          ref={(body) => {
+            bodies.current[i + 9] = body;
+          }}
           position={[-12 + i * 1.5, 1.5, 9]}
           colliders="ball"
           mass={8}
@@ -226,13 +266,23 @@ export function Island({
   onSelect,
   resetKey,
   reduceMotion,
+  timeOfDay,
 }: {
   quality: Quality;
   activeZone: ZoneId | null;
   onSelect: (id: ZoneId) => void;
   resetKey: number;
   reduceMotion: boolean;
+  timeOfDay: TimeOfDay;
 }) {
+  const ramp = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(RAMP_VERTICES, 3));
+    geometry.setIndex(RAMP_INDICES);
+    geometry.computeVertexNormals();
+    return geometry;
+  }, []);
+  useEffect(() => () => ramp.dispose(), [ramp]);
   return (
     <>
       <RigidBody type="fixed" colliders={false}>
@@ -277,13 +327,25 @@ export function Island({
           active={activeZone === zone.id}
           onSelect={onSelect}
           reduceMotion={reduceMotion}
+          timeOfDay={timeOfDay}
         />
       ))}
-      <RigidBody type="fixed" colliders="cuboid" position={[8, 0.85, 15]} rotation={[-0.25, 0, 0]}>
-        <Box size={[5, 0.5, 8]} color="#bb8c5e" />
-        {[-1.5, 0, 1.5].map((x) => (
-          <Box key={x} position={[x, 0.27, 0]} size={[0.13, 0.035, 8]} color="#f4d8a3" />
-        ))}
+      <RigidBody type="fixed" colliders={false} position={RAMP_POSITION}>
+        <ConvexHullCollider args={[RAMP_VERTICES]} friction={0.85} />
+        <mesh geometry={ramp} castShadow receiveShadow>
+          <meshStandardMaterial color="#ad885f" roughness={0.85} flatShading />
+        </mesh>
+        {[-2.6, 2.6].flatMap((x) =>
+          [-1, 1].map((side) => (
+            <Box
+              key={`${x}:${side}`}
+              position={[x, 0.728, side * 3.5]}
+              size={[0.09, 0.02, 7.13]}
+              rotation={[side * 0.195, 0, 0]}
+              color="#f0d8ac"
+            />
+          )),
+        )}
       </RigidBody>
       <PlayObjects resetKey={resetKey} />
       {[-1, 1].map((side) => (

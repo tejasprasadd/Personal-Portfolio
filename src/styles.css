@@ -432,6 +432,44 @@ a:focus-visible {
 .scene-stage canvas {
   touch-action: pan-y;
 }
+.playground:not(.is-exploring) .scene-stage {
+  mask-image: radial-gradient(ellipse 70% 65% at 53% 53%, #000 55%, transparent 89%);
+}
+.playground[data-island-time="night"] .world-label {
+  background: #1b3444ed;
+  color: #e5eadf;
+  border-color: #6a919576;
+}
+.playground.is-exploring[data-island-time="night"] {
+  --pine: #e4ece3;
+}
+.playground.is-exploring[data-island-time="night"] .hero {
+  background: #152b3f;
+  color: #e4ece3;
+}
+.playground.is-exploring[data-island-time="night"]
+  :is(
+    .drive-title .eyebrow,
+    .drive-title .text-link,
+    .drive-map span,
+    .drive-speed p,
+    .driving-hint > span
+  ) {
+  color: #bdd1cc;
+}
+.playground.is-exploring[data-island-time="night"]
+  :is(.drive-tools button, .destination-nav button, .driving-hint kbd, .driving-hint > button) {
+  color: #e4ece3;
+  background: #1a3546eb;
+  border-color: #66868a80;
+}
+.playground.is-exploring[data-island-time="night"] .drive-map svg {
+  background: #1a3546c9;
+}
+.drive-tools button {
+  min-width: 44px;
+  min-height: 44px;
+}
 .hero-copy {
   position: absolute;
   top: 25.5%;

@@ -60,6 +60,22 @@ export function SettingsPanel({
   return (
     <HoloPanel title="SETTINGS" subtitle="system preferences" accent="#22D3EE" onClose={onClose}>
       <div className="space-y-1">
+        {mode === "3d" && (
+          <Row label="Island lighting">
+            <div className="flex gap-2" role="group" aria-label="Island time of day">
+              {(["auto", "day", "night"] as const).map((value) => (
+                <button
+                  key={value}
+                  aria-pressed={settings.timeOfDay === value}
+                  onClick={() => update({ timeOfDay: value })}
+                  className="rounded border border-border px-3 py-2 text-sm aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                >
+                  {value === "auto" ? "Local time" : value === "day" ? "Day" : "Night"}
+                </button>
+              ))}
+            </div>
+          </Row>
+        )}
         <Row label="Sound effects">
           <Toggle
             on={settings.sound}
@@ -68,7 +84,11 @@ export function SettingsPanel({
           />
         </Row>
         <Row label="Ambient music">
-          <Toggle on={settings.music} label="Ambient music" onChange={(v) => update({ music: v })} />
+          <Toggle
+            on={settings.music}
+            label="Ambient music"
+            onChange={(v) => update({ music: v })}
+          />
         </Row>
         <Row label="Quality">
           <div className="flex gap-2">

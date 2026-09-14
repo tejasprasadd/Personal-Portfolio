@@ -8,6 +8,8 @@ import { Player, type PlayerState } from "./Player";
 import { ZONES, type ZoneId } from "./zones";
 import type { Quality } from "@/hooks/useSettings";
 import { useDrivingAudio } from "@/hooks/useDrivingAudio";
+import { Ocean } from "./Ocean";
+import type { TimeOfDay } from "@/lib/timeOfDay";
 
 export type Telemetry = { speed: number; x: number; z: number; airborne: boolean };
 export type SceneProps = {
@@ -18,6 +20,8 @@ export type SceneProps = {
   paused: boolean;
   sound: boolean;
   music: boolean;
+  timeOfDay: TimeOfDay;
+  onReset: () => void;
   activeZone: ZoneId | null;
   onNearZone: (id: ZoneId | null) => void;
   onSelectZone: (id: ZoneId) => void;
@@ -26,14 +30,20 @@ export type SceneProps = {
   onFailure: () => void;
   onFrame?: ((dt: number) => void) | undefined;
 };
-function Lighting({ quality }: { quality: Quality }) {
+function Lighting({ quality, timeOfDay }: { quality: Quality; timeOfDay: TimeOfDay }) {
   const { gl, scene } = useThree();
+  const night = timeOfDay === "night";
+  useEffect(() => {
+    scene.environmentIntensity = night ? 0.1 : 0.38;
+    scene.background = new THREE.Color(night ? "#152b3f" : "#a6c9cc");
+    scene.fog = new THREE.Fog(night ? "#152b3f" : "#a6c9cc", 155, 340);
+    gl.toneMappingExposure = night ? 0.85 : 1.05;
+  }, [gl, scene, night]);
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl),
       room = new RoomEnvironment();
     const env = pmrem.fromScene(room, 0.04);
     scene.environment = env.texture;
-    scene.environmentIntensity = 0.32;
     room.dispose();
     pmrem.dispose();
     return () => {
@@ -43,11 +53,13 @@ function Lighting({ quality }: { quality: Quality }) {
   }, [gl, scene]);
   return (
     <>
-      <hemisphereLight args={["#f7f6dc", "#829c88", 2]} />
+      <hemisphereLight
+        args={[night ? "#8dabc9" : "#f7f6dc", night ? "#233d48" : "#829c88", night ? 0.45 : 1.7]}
+      />
       <directionalLight
         position={[-25, 65, 35]}
-        color="#fff2d5"
-        intensity={3.2}
+        color={night ? "#acc9f2" : "#fff2d5"}
+        intensity={night ? 0.65 : 2.8}
         castShadow={quality !== "low"}
         shadow-mapSize={quality === "high" ? [2048, 2048] : [1024, 1024]}
         shadow-camera-left={-52}
@@ -65,16 +77,22 @@ function CameraRig({
   state,
   exploring,
   reduceMotion,
+  resetKey,
 }: {
   state: PlayerState;
   exploring: boolean;
   reduceMotion: boolean;
+  resetKey: number;
 }) {
   const { camera, gl, size } = useThree();
   const orbit = useRef({ yaw: 0.0, zoom: 1, dragging: false, x: 0 }),
     target = useMemo(() => new THREE.Vector3(), []),
     desired = useMemo(() => new THREE.Vector3(), []),
     look = useMemo(() => new THREE.Vector3(), []);
+  useEffect(() => {
+    orbit.current = { yaw: 0, zoom: 1, dragging: false, x: 0 };
+    look.copy(state.position);
+  }, [resetKey, look, state]);
   useEffect(() => {
     const el = gl.domElement;
     const down = (e: PointerEvent) => {
@@ -113,14 +131,14 @@ function CameraRig({
     const dt = Math.min(delta, 0.05),
       yaw = 0.64 + orbit.current.yaw;
     const narrow = size.width / size.height < 1.1;
-    const radius = exploring ? 29 * orbit.current.zoom : narrow ? 125 : 105;
+    const radius = exploring ? 20 * orbit.current.zoom : narrow ? 125 : 105;
     if (exploring) target.set(state.position.x, state.position.y, state.position.z);
     else target.set(0, 0, 0);
     look.lerp(target, 1 - Math.exp(-dt * 4));
     const sway = reduceMotion || exploring ? 0 : Math.sin(s.clock.elapsedTime * 0.16) * 0.7;
     desired.set(
       look.x + Math.sin(yaw) * radius,
-      look.y + (exploring ? 25 * orbit.current.zoom : narrow ? 92 : 78) + sway,
+      look.y + (exploring ? 16 * orbit.current.zoom : narrow ? 92 : 78) + sway,
       look.z + Math.cos(yaw) * radius,
     );
     camera.position.lerp(desired, reduceMotion ? 1 : 1 - Math.exp(-dt * 3));
@@ -214,7 +232,12 @@ function Scene(props: SceneProps) {
       }}
     >
       <Suspense fallback={null}>
-        <Lighting quality={props.quality} />
+        <Lighting quality={props.quality} timeOfDay={props.timeOfDay} />
+        <Ocean
+          quality={props.quality}
+          reduceMotion={props.reduceMotion}
+          timeOfDay={props.timeOfDay}
+        />
         <Physics
           gravity={[0, -18, 0]}
           timeStep={1 / 60}
@@ -227,15 +250,23 @@ function Scene(props: SceneProps) {
             onSelect={props.onSelectZone}
             resetKey={props.resetKey}
             reduceMotion={props.reduceMotion}
+            timeOfDay={props.timeOfDay}
           />
           <Player
-            key={props.resetKey}
             state={state}
             resetKey={props.resetKey}
             reduceMotion={props.reduceMotion || props.quality === "low"}
+            timeOfDay={props.timeOfDay}
+            quality={props.quality}
+            onReset={props.onReset}
           />
         </Physics>
-        <CameraRig state={state} exploring={props.exploring} reduceMotion={props.reduceMotion} />
+        <CameraRig
+          state={state}
+          exploring={props.exploring}
+          reduceMotion={props.reduceMotion}
+          resetKey={props.resetKey}
+        />
         <Runtime state={state} props={props} />
       </Suspense>
     </Canvas>

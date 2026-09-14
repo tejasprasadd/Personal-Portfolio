@@ -3,16 +3,30 @@ import type { ControlState } from "@/hooks/useGameControls";
 
 export const ROVER = {
   mass: 520,
-  wheelRadius: 0.62,
-  halfTrack: 1.18,
-  halfBase: 1.25,
-  connectY: 0.38,
-  suspensionRest: 0.55,
-  suspensionTravel: 0.55,
+  wheelRadius: 0.48,
+  halfTrack: 0.99,
+  halfBase: 1.48,
+  connectY: 0.32,
+  suspensionRest: 0.5,
+  suspensionTravel: 0.38,
   maxSpeed: 21,
   maxBoostSpeed: 30,
   maxReverse: 8,
 } as const;
+export const CHASSIS = {
+  halfExtents: [0.88, 0.34, 1.98] as [number, number, number],
+  position: [0, 0.16, 0] as [number, number, number],
+};
+export const SPAWN = { x: 0, y: 1.25, z: 18 };
+/** Reset a live body without destroying React/Rapier registrations. */
+export function resetBody(body: RigidBody, position = SPAWN, heading = Math.PI) {
+  body.setTranslation(position, true);
+  body.setRotation({ x: 0, y: Math.sin(heading / 2), z: 0, w: Math.cos(heading / 2) }, true);
+  body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+  body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+  body.resetForces(true);
+  body.resetTorques(true);
+}
 export const WHEEL_ANCHORS: [number, number][] = [
   [-ROVER.halfTrack, ROVER.halfBase],
   [ROVER.halfTrack, ROVER.halfBase],
@@ -32,7 +46,7 @@ export function createRoverController(world: World, body: RigidBody) {
       ROVER.wheelRadius,
     );
   for (let i = 0; i < 4; i++) {
-    vehicle.setWheelSuspensionStiffness(i, 24);
+    vehicle.setWheelSuspensionStiffness(i, 32);
     vehicle.setWheelSuspensionCompression(i, 2.4);
     vehicle.setWheelSuspensionRelaxation(i, 3.6);
     vehicle.setWheelMaxSuspensionTravel(i, ROVER.suspensionTravel);

@@ -1,6 +1,14 @@
 import { beforeAll, expect, test } from "bun:test";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { createRoverController, driveRover, ROVER } from "../src/components/3d/vehiclePhysics";
+import {
+  createRoverController,
+  driveRover,
+  ROVER,
+  CHASSIS,
+  resetBody,
+  SPAWN,
+} from "../src/components/3d/vehiclePhysics";
+import { RAMP_VERTICES } from "../src/components/3d/ramp";
 import type { ControlState } from "../src/hooks/useGameControls";
 beforeAll(async () => {
   await RAPIER.init();
@@ -19,8 +27,8 @@ function rig() {
       .setCcdEnabled(true),
   );
   world.createCollider(
-    RAPIER.ColliderDesc.cuboid(0.95, 0.45, 1.6)
-      .setTranslation(0, 0.35, -0.1)
+    RAPIER.ColliderDesc.cuboid(...CHASSIS.halfExtents)
+      .setTranslation(...CHASSIS.position)
       .setMass(ROVER.mass)
       .setFriction(0.6),
     body,
@@ -38,11 +46,44 @@ function rig() {
 }
 test("suspension settles above ground and supports all four wheels", () => {
   const r = rig();
-  expect(r.body.translation().y).toBeGreaterThan(0.5);
+  expect(r.body.translation().y).toBeGreaterThan(0.4);
   expect(r.body.translation().y).toBeLessThan(1.5);
   for (let i = 0; i < 4; i++) expect(r.vehicle.wheelIsInContact(i)).toBe(true);
   r.dispose();
 });
+
+test("live reset clears momentum, orientation and applied forces", () => {
+  const r = rig();
+  r.step({ ...idle, forward: 1, turn: 0.4 }, 90);
+  r.body.addForce({ x: 100, y: 100, z: 100 }, true);
+  r.body.addTorque({ x: 100, y: 10, z: 100 }, true);
+  resetBody(r.body);
+  expect(r.body.translation()).toEqual(SPAWN);
+  expect(r.body.linvel()).toEqual({ x: 0, y: 0, z: 0 });
+  expect(r.body.angvel()).toEqual({ x: 0, y: 0, z: 0 });
+  expect(r.body.userForce()).toEqual({ x: 0, y: 0, z: 0 });
+  expect(r.body.userTorque()).toEqual({ x: 0, y: 0, z: 0 });
+  expect(r.body.rotation().y).toBeCloseTo(1);
+  r.dispose();
+});
+
+for (const direction of [-1, 1])
+  test(`closed ramp is traversable in direction ${direction}`, () => {
+    const r = rig();
+    const hull = RAPIER.ColliderDesc.convexHull(RAMP_VERTICES)!;
+    r.world.createCollider(hull.setFriction(0.85));
+    resetBody(r.body, { x: 0, y: 1.25, z: -direction * 12 }, direction === 1 ? 0 : Math.PI);
+    r.step(idle, 90);
+    let highest = 0;
+    for (let i = 0; i < 300; i++) {
+      r.step({ ...idle, forward: 0.6 });
+      highest = Math.max(highest, r.body.translation().y);
+    }
+    expect(highest).toBeGreaterThan(1.6);
+    expect(r.body.translation().z * direction).toBeGreaterThan(8);
+    expect(r.body.translation().y).toBeGreaterThan(0.3);
+    r.dispose();
+  });
 test("analogue throttle changes acceleration, brakes stop, reverse engages", () => {
   const full = rig(),
     half = rig();

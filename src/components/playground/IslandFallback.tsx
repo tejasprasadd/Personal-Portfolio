@@ -1,5 +1,5 @@
 /** Lightweight, accessible illustration used before WebGL and on low-power devices. */
-export function IslandFallback() {
+export function IslandFallback({ timeOfDay = "day" }: { timeOfDay?: "day" | "night" }) {
   return (
     <div className="island-fallback" aria-label="Illustrated island playground">
       <svg
@@ -7,6 +7,23 @@ export function IslandFallback() {
         role="img"
         aria-label="A little green island with a rover, trees, and project buildings"
       >
+        <ellipse
+          cx="355"
+          cy="320"
+          rx="335"
+          ry="175"
+          fill={timeOfDay === "night" ? "#193b50" : "#6dadae"}
+        />
+        <ellipse
+          cx="355"
+          cy="300"
+          rx="275"
+          ry="144"
+          fill="none"
+          stroke={timeOfDay === "night" ? "#44727a" : "#cae1d4"}
+          strokeWidth="3"
+          opacity=".6"
+        />
         <ellipse cx="365" cy="405" rx="230" ry="48" fill="#91a89a" opacity=".13" />
         <path d="M100 290Q350 90 610 280L610 318Q360 495 100 328Z" fill="#b4b196" />
         <ellipse cx="355" cy="283" rx="259" ry="128" fill="#b7cba9" />
