@@ -9,6 +9,7 @@ import { ZONES, type ZoneId } from "./zones";
 import type { Quality } from "@/hooks/useSettings";
 import { useDrivingAudio } from "@/hooks/useDrivingAudio";
 import { Ocean } from "./Ocean";
+import { BoostTrail } from "./BoostTrail";
 import type { TimeOfDay } from "@/lib/timeOfDay";
 
 export type Telemetry = { speed: number; x: number; z: number; airborne: boolean };
@@ -261,6 +262,12 @@ function Scene(props: SceneProps) {
             onReset={props.onReset}
           />
         </Physics>
+        <BoostTrail
+          key={props.resetKey}
+          state={state}
+          paused={props.paused || !visible || !props.exploring}
+          reduceMotion={props.reduceMotion}
+        />
         <CameraRig
           state={state}
           exploring={props.exploring}

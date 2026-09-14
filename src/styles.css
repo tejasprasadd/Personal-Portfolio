@@ -1031,6 +1031,10 @@ a:focus-visible {
 .is-exploring .site-header {
   position: fixed;
   height: 80px;
+  pointer-events: none;
+}
+.is-exploring .site-header .wordmark {
+  pointer-events: auto;
 }
 .is-exploring .scene-stage {
   inset: 0;
