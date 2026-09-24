@@ -1,5 +1,7 @@
 import { HoloPanel } from "./HoloPanel";
 import { ACHIEVEMENTS, type AchievementId } from "@/data/portfolio";
+import { MISSIONS, type MissionDefinition, type MissionId } from "@/lib/missions";
+import { Compass, Stamp } from "lucide-react";
 
 const CONTROLS: [string, string][] = [
   ["W / ↑", "Accelerate"],
@@ -20,13 +22,58 @@ const CONTROLS: [string, string][] = [
 export function HelpOverlay({
   onClose,
   unlocked,
+  completedMissions,
+  activeMission,
+  onChooseMission,
 }: {
   onClose: () => void;
   unlocked: AchievementId[];
+  completedMissions: MissionId[];
+  activeMission: MissionDefinition | null;
+  onChooseMission: () => void;
 }) {
   return (
-    <HoloPanel title="HELP / CONTROLS" subtitle="how to explore TEJAS_OS" accent="#86EFAC" onClose={onClose}>
-      <div className="grid gap-6 md:grid-cols-2">
+    <HoloPanel
+      title="FIELD GUIDE"
+      subtitle="missions, passport, and driving controls"
+      accent="#86EFAC"
+      onClose={onClose}
+    >
+      <section className="field-guide-missions">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-cyan/80">
+            Current mission
+          </p>
+          <h3>{activeMission?.title ?? "Free exploration"}</h3>
+          <p>
+            {activeMission?.description ??
+              "Choose a short role-based route or continue exploring at your own pace."}
+          </p>
+        </div>
+        <button onClick={onChooseMission}>
+          <Compass /> {activeMission ? "Change mission" : "Choose a mission"}
+        </button>
+      </section>
+      <section className="passport-strip" aria-label="Engineering passport">
+        <p>
+          <Stamp /> Engineering passport
+        </p>
+        <div>
+          {Object.values(MISSIONS).map((mission) => {
+            const earned = completedMissions.includes(mission.id);
+            return (
+              <span
+                key={mission.id}
+                className={earned ? "earned" : ""}
+                style={{ borderColor: earned ? mission.accent : undefined }}
+              >
+                {earned ? "✓" : "○"} {mission.stamp}
+              </span>
+            );
+          })}
+        </div>
+      </section>
+      <div className="grid gap-6 md:grid-cols-2 field-guide-columns">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-cyan/80">Controls</p>
           <ul className="mt-3 space-y-2">

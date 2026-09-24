@@ -11,15 +11,23 @@ import {
 } from "@/components/content/Sections";
 import { PROJECTS } from "@/data/portfolio";
 import { ZONES, type ZoneId } from "@/components/3d/zones";
+import { MISSIONS, type MissionId, type MissionStep } from "@/lib/missions";
+import { MissionStepAction } from "./MissionUI";
 
 export function PanelRouter({
   zone,
   onClose,
   onSocial,
+  missionId,
+  missionStep,
+  onMissionStepComplete,
 }: {
   zone: ZoneId;
   onClose: () => void;
   onSocial: (label: string) => void;
+  missionId?: MissionId | null;
+  missionStep?: MissionStep | null;
+  onMissionStepComplete?: () => void;
 }) {
   const meta = ZONES.find((z) => z.id === zone)!;
   const project = PROJECTS.find((p) => p.id === zone);
@@ -65,6 +73,13 @@ export function PanelRouter({
   return (
     <HoloPanel title={title} subtitle={subtitle} accent={meta.color} onClose={onClose}>
       {body}
+      {missionId && missionStep?.zone === zone && onMissionStepComplete && (
+        <MissionStepAction
+          mission={MISSIONS[missionId]}
+          step={missionStep}
+          onComplete={onMissionStepComplete}
+        />
+      )}
     </HoloPanel>
   );
 }

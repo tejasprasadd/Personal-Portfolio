@@ -35,7 +35,12 @@ function Beacon({
       {/* ground ring */}
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
         <ringGeometry args={[3.2, 3.9, 40]} />
-        <meshBasicMaterial color={color} transparent opacity={active ? 0.85 : 0.42} side={THREE.DoubleSide} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={active ? 0.85 : 0.42}
+          side={THREE.DoubleSide}
+        />
       </mesh>
       {/* light column */}
       <mesh position={[0, 4, 0]}>
@@ -60,22 +65,27 @@ function Beacon({
 /** Waypoint beacons marking every zone so they're findable across the terrain. */
 export function Waypoints({
   activeZone,
+  missionTarget,
   reduceMotion,
 }: {
   activeZone: ZoneId | null;
+  missionTarget: ZoneId | null;
   reduceMotion: boolean;
 }) {
+  const target = ZONES.find((zone) => zone.id === missionTarget);
+  if (!target) return null;
   return (
     <group>
-      {ZONES.map((z) => (
-        <Beacon
-          key={z.id}
-          color={z.color}
-          active={activeZone === z.id}
-          reduceMotion={reduceMotion}
-          position={[z.position[0], heightAt(z.position[0], z.position[2]), z.position[2]]}
-        />
-      ))}
+      <Beacon
+        color={target.color}
+        active={activeZone === target.id || missionTarget === target.id}
+        reduceMotion={reduceMotion}
+        position={[
+          target.position[0],
+          heightAt(target.position[0], target.position[2]),
+          target.position[2],
+        ]}
+      />
     </group>
   );
 }

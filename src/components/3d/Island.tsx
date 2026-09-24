@@ -14,6 +14,7 @@ import type { Quality } from "@/hooks/useSettings";
 import type { TimeOfDay } from "@/lib/timeOfDay";
 import { resetBody } from "./vehiclePhysics";
 import { RAMP_POSITION, RAMP_VERTICES, RAMP_INDICES } from "./ramp";
+import { Waypoints } from "./Waypoints";
 
 function Box({
   position = [0, 0, 0],
@@ -263,6 +264,7 @@ function PlayObjects({ resetKey }: { resetKey: number }) {
 export function Island({
   quality,
   activeZone,
+  missionTarget,
   onSelect,
   resetKey,
   reduceMotion,
@@ -270,6 +272,7 @@ export function Island({
 }: {
   quality: Quality;
   activeZone: ZoneId | null;
+  missionTarget: ZoneId | null;
   onSelect: (id: ZoneId) => void;
   resetKey: number;
   reduceMotion: boolean;
@@ -330,6 +333,11 @@ export function Island({
           timeOfDay={timeOfDay}
         />
       ))}
+      <Waypoints
+        activeZone={activeZone}
+        missionTarget={missionTarget}
+        reduceMotion={reduceMotion}
+      />
       <RigidBody type="fixed" colliders={false} position={RAMP_POSITION}>
         <ConvexHullCollider args={[RAMP_VERTICES]} friction={0.85} />
         <mesh geometry={ramp} castShadow receiveShadow>

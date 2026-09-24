@@ -24,6 +24,7 @@ export type SceneProps = {
   timeOfDay: TimeOfDay;
   onReset: () => void;
   activeZone: ZoneId | null;
+  missionTarget: ZoneId | null;
   onNearZone: (id: ZoneId | null) => void;
   onSelectZone: (id: ZoneId) => void;
   onTelemetry: (data: Telemetry) => void;
@@ -248,6 +249,7 @@ function Scene(props: SceneProps) {
           <Island
             quality={props.quality}
             activeZone={props.activeZone}
+            missionTarget={props.missionTarget}
             onSelect={props.onSelectZone}
             resetKey={props.resetKey}
             reduceMotion={props.reduceMotion}

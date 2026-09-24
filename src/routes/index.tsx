@@ -32,6 +32,9 @@ import { useSettings } from "@/hooks/useSettings";
 import { useGameControls, clearDrivingControls } from "@/hooks/useGameControls";
 import { activateDrivingAudio } from "@/lib/drivingAudio";
 import { useAchievements } from "@/hooks/useAchievements";
+import { useMissions } from "@/hooks/useMissions";
+import { MISSIONS, type MissionId } from "@/lib/missions";
+import { MissionHUD, MissionPicker, MissionRecap } from "@/components/experience/MissionUI";
 import { seedTier, useQualityScaler } from "@/hooks/useQualityScaler";
 import { RESUME_URL, RESUME_FILENAME } from "@/lib/resume";
 const Scene = lazy(() => import("@/components/3d/Scene"));
@@ -93,6 +96,8 @@ function Index() {
     [nearZone, setNearZone] = useState<ZoneId | null>(null),
     [help, setHelp] = useState(false),
     [config, setConfig] = useState(false),
+    [missionPicker, setMissionPicker] = useState(false),
+    [missionPaused, setMissionPaused] = useState(false),
     [resetKey, setResetKey] = useState(0);
   const [telemetry, setTelemetry] = useState<Telemetry>({ speed: 0, x: 0, z: 18, airborne: false }),
     [toasts, setToasts] = useState<Toast[]>([]);
@@ -114,6 +119,7 @@ function Index() {
     reset: resetAchievements,
   } = useAchievements((label) => toast(label, "achievement"));
   const auto = useQualityScaler(seedTier(caps));
+  const missions = useMissions();
   useEffect(() => {
     if (caps.ready) auto.reset(seedTier(caps));
   }, [caps.ready, caps.lowPower]);
@@ -164,7 +170,7 @@ function Index() {
   useEffect(() => {
     if (audioError) toast(audioError);
   }, [audioError, toast]);
-  const busy = !!openZone || help || config;
+  const busy = !!openZone || help || config || missionPicker || !!missions.recap;
   useGameControls({
     enabled: exploring && !busy,
     onInteract: () => nearZone && openPanel(nearZone),
@@ -177,16 +183,44 @@ function Index() {
     onToggleMute: () => update({ sound: !settings.sound }),
   });
   const can3D = caps.ready && caps.webgl && !failed && (!caps.lowPower || optIn);
-  const start = () => {
+  const startDrive = () => {
     if (settings.sound || settings.music) void activateDrivingAudio();
     if (!can3D) {
       setOptIn(true);
       return;
     }
     setExploring(true);
+    setMissionPaused(true);
     unlock("system_booted");
   };
+  const startMission = (id: MissionId) => {
+    if (settings.sound || settings.music) void activateDrivingAudio();
+    if (caps.lowPower) setOptIn(true);
+    missions.start(id);
+    setMissionPaused(false);
+    setMissionPicker(false);
+    setExploring(true);
+    unlock("system_booted");
+    if (failed || (caps.ready && !caps.webgl)) setOpenZone(MISSIONS[id].steps[0]!.zone);
+  };
+  const resumeMission = () => {
+    if (!missions.state.active || !missions.activeStep) {
+      setMissionPicker(true);
+      return;
+    }
+    if (settings.sound || settings.music) void activateDrivingAudio();
+    if (caps.lowPower) setOptIn(true);
+    setMissionPaused(false);
+    setExploring(true);
+    if (failed || (caps.ready && !caps.webgl)) setOpenZone(missions.activeStep.zone);
+  };
   const near = ZONES.find((z) => z.id === nearZone);
+  const missionTarget = missionPaused ? null : (missions.activeStep?.zone ?? null);
+  const missionZone = missionTarget ? ZONES.find((zone) => zone.id === missionTarget) : null;
+  const missionDistance = missionZone
+    ? Math.hypot(telemetry.x - missionZone.position[0], telemetry.z - missionZone.position[2])
+    : 0;
+  const recapMission = missions.recap ? MISSIONS[missions.recap] : null;
   return (
     <MotionConfig reducedMotion="user">
       <div className={`playground ${exploring ? "is-exploring" : ""}`} data-island-time={timeOfDay}>
@@ -235,6 +269,7 @@ function Index() {
                     timeOfDay={timeOfDay}
                     onReset={reset}
                     activeZone={nearZone}
+                    missionTarget={missionTarget}
                     onNearZone={setNearZone}
                     onSelectZone={openPanel}
                     onTelemetry={setTelemetry}
@@ -267,16 +302,23 @@ function Index() {
                 <div className="hero-actions">
                   <button
                     className="primary-action"
-                    onClick={start}
-                    disabled={(can3D && !ready) || failed || (caps.ready && !caps.webgl)}
+                    onClick={missions.state.active ? resumeMission : () => setMissionPicker(true)}
                   >
                     <Compass size={18} />
+                    {missions.state.active ? "Resume guided mission" : "Start a guided mission"}
+                    <ArrowRight size={17} />
+                  </button>
+                  <button
+                    className="secondary-action"
+                    onClick={startDrive}
+                    disabled={(can3D && !ready) || failed || (caps.ready && !caps.webgl)}
+                  >
                     {can3D
                       ? ready
-                        ? "Take a little drive"
+                        ? "Free drive"
                         : "Preparing your jeep…"
                       : "Try the 3D experience"}
-                    <ArrowRight size={17} />
+                    <MoveUpRight size={15} />
                   </button>
                   <a className="text-link" href="#work">
                     Or, straight to the work <ArrowDown size={15} />
@@ -358,7 +400,7 @@ function Index() {
                   <button
                     key={z.id}
                     onClick={() => openPanel(z.id)}
-                    className={nearZone === z.id ? "active" : ""}
+                    className={nearZone === z.id || missionTarget === z.id ? "active" : ""}
                   >
                     {z.sub === "Project" ? z.label : z.sub}
                   </button>
@@ -418,6 +460,22 @@ function Index() {
                   </>
                 )}
               </div>
+              {!missionPaused &&
+                missions.activeMission &&
+                missions.state.active &&
+                missions.activeStep && (
+                  <MissionHUD
+                    mission={missions.activeMission}
+                    stepIndex={missions.state.active.step}
+                    distance={missionDistance}
+                    lightweight={!can3D}
+                    onOpen={() => openPanel(missions.activeStep!.zone)}
+                    onStop={() => {
+                      setMissionPaused(true);
+                      toast("Mission paused. Free drive is still open.");
+                    }}
+                  />
+                )}
               {caps.touch && !busy && (
                 <MobileControls onInteract={() => nearZone && openPanel(nearZone)} />
               )}
@@ -430,9 +488,47 @@ function Index() {
             zone={openZone}
             onClose={() => setOpenZone(null)}
             onSocial={() => unlock("network_connected")}
+            missionId={missions.state.active?.id ?? null}
+            missionStep={missions.activeStep ?? null}
+            onMissionStepComplete={() => {
+              const completedZone = missions.activeStep?.zone;
+              if (!completedZone) return;
+              missions.advance(completedZone);
+              setMissionPaused(false);
+              setOpenZone(null);
+              toast("Evidence logged. Your next waypoint is active.", "achievement");
+            }}
           />
         )}
-        {help && <HelpOverlay unlocked={unlocked} onClose={() => setHelp(false)} />}
+        {missionPicker && (
+          <MissionPicker
+            completed={missions.state.completed}
+            onClose={() => setMissionPicker(false)}
+            onStart={startMission}
+          />
+        )}
+        {recapMission && (
+          <MissionRecap
+            mission={recapMission}
+            onClose={missions.closeRecap}
+            onAnother={() => {
+              missions.closeRecap();
+              setMissionPicker(true);
+            }}
+          />
+        )}
+        {help && (
+          <HelpOverlay
+            unlocked={unlocked}
+            completedMissions={missions.state.completed}
+            activeMission={missions.activeMission}
+            onChooseMission={() => {
+              setHelp(false);
+              setMissionPicker(true);
+            }}
+            onClose={() => setHelp(false)}
+          />
+        )}
         {config && (
           <SettingsPanel
             mode="3d"
@@ -441,6 +537,7 @@ function Index() {
             onClose={() => setConfig(false)}
             onResetAchievements={() => {
               resetAchievements();
+              missions.reset();
               visited.current.clear();
             }}
             onResetScene={reset}
