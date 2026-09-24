@@ -40,7 +40,7 @@ const ChartContainer = React.forwardRef<
   }
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId();
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
+  const chartId = `chart-${(id || uniqueId.replace(/:/g, "")).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -61,33 +61,36 @@ const ChartContainer = React.forwardRef<
 });
 ChartContainer.displayName = "Chart";
 
-const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = Object.entries(config).filter(([, config]) => config.theme || config.color);
-
-  if (!colorConfig.length) {
-    return null;
-  }
-
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join("\n")}
+function safeCssIdentifier(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
-`,
-          )
-          .join("\n"),
-      }}
-    />
-  );
+
+function safeCssColor(value: string | undefined): string | null {
+  if (!value) return null;
+  const color = value.trim();
+  if (!color || /[;{}<>\\]/.test(color)) return null;
+  if (/url\s*\(|expression\s*\(|@import|\/\*/i.test(color)) return null;
+  return /^[#(),.%\w\s-]+$/.test(color) ? color : null;
+}
+
+const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  const rules = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const variables = Object.entries(config)
+        .map(([key, itemConfig]) => {
+          const color = safeCssColor(
+            itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color,
+          );
+          return color ? `  --color-${safeCssIdentifier(key)}: ${color};` : null;
+        })
+        .filter(Boolean)
+        .join("\n");
+      return variables ? `${prefix} [data-chart=${id}] {\n${variables}\n}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return rules ? <style>{rules}</style> : null;
 };
 
 const ChartTooltip = RechartsPrimitive.Tooltip;

@@ -26,11 +26,11 @@ declare global {
 export function reportLovableError(error: unknown, context: Record<string, unknown> = {}) {
   if (typeof window === "undefined") return;
   window.__lovableEvents?.captureException?.(
-    error,
+    redactSensitiveValue(error),
     {
       source: "react_error_boundary",
       route: window.location.pathname,
-      ...context,
+      ...(redactSensitiveValue(context) as Record<string, unknown>),
     },
     {
       mechanism: "react_error_boundary",
@@ -49,10 +49,12 @@ export function reportLovableError(error: unknown, context: Record<string, unkno
       : error instanceof Error
         ? error.message
         : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
+  const stack =
+    error instanceof Error && error.stack ? redactSensitiveText(error.stack) : undefined;
   window.__lovableReportRuntimeError?.({
-    message,
+    message: redactSensitiveText(message),
     ...(stack !== undefined && { stack }),
     filename: window.location.pathname,
   });
 }
+import { redactSensitiveText, redactSensitiveValue } from "./security";

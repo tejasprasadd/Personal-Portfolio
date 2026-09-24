@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RetroButton } from "@/components/ui/RetroButton";
+import { validateOAuthRedirect } from "@/lib/security";
 
 type AuthorizationDetails = {
   client?: { name?: string; client_id?: string; redirect_uri?: string } | null;
@@ -30,7 +31,8 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
   // Browser-only: the auth session lives in localStorage, absent during SSR.
   ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({
-    authorization_id: typeof s["authorization_id"] === "string" ? (s["authorization_id"] as string) : "",
+    authorization_id:
+      typeof s["authorization_id"] === "string" ? (s["authorization_id"] as string) : "",
   }),
   beforeLoad: async ({ search, location }) => {
     if (!search["authorization_id"]) throw new Error("Missing authorization_id");
@@ -44,7 +46,10 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     const authorizationId = new URLSearchParams(location.search).get("authorization_id")!;
     const { data, error } = await oauth().getAuthorizationDetails(authorizationId);
     if (error) throw new Error(error.message);
-    const immediate = data?.redirect_url ?? data?.redirect_to;
+    const immediate = validateOAuthRedirect(
+      data?.redirect_url ?? data?.redirect_to,
+      data?.client?.redirect_uri,
+    );
     if (immediate && !data?.client) throw redirect({ href: immediate });
     const { data: userData } = await supabase.auth.getUser();
     return { details: data, email: userData.user?.email ?? null };
@@ -108,10 +113,13 @@ function Consent() {
       setError(error.message);
       return;
     }
-    const target = data?.redirect_url ?? data?.redirect_to;
+    const target = validateOAuthRedirect(
+      data?.redirect_url ?? data?.redirect_to,
+      details?.client?.redirect_uri,
+    );
     if (!target) {
       setBusy(false);
-      setError("No redirect returned by the authorization server.");
+      setError("The authorization server returned an invalid redirect.");
       return;
     }
     window.location.href = target;

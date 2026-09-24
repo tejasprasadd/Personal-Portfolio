@@ -1719,6 +1719,36 @@ a:focus-visible {
     margin-left: 20px;
   }
 }
+@media (min-width: 761px) and (max-height: 860px) {
+  .hero {
+    min-height: 700px;
+  }
+  .hero-copy {
+    top: 17%;
+  }
+  .hero-copy > .eyebrow {
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    margin-bottom: 20px;
+  }
+  .hero-intro {
+    line-height: 1.65;
+  }
+  .hero-actions {
+    gap: 13px;
+    margin-top: 20px;
+  }
+  .location-note {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 18px;
+  }
+  .hero-bottom {
+    bottom: 18px;
+  }
+}
 @media (max-width: 760px) {
   .site-header {
     height: 80px;
