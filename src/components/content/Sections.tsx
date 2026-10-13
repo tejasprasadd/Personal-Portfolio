@@ -96,6 +96,11 @@ export function ProjectDetail({ project }: { project: Project }) {
           ))}
         </div>
       </div>
+      <div className="flex flex-wrap gap-4 font-mono text-xs text-cyan">
+        <a href={`/work/${project.id}`} className="inline-flex items-center gap-1 hover:underline">{project.id === "queans" ? "Read case study" : "Project details"} <ArrowUpRight className="size-3.5" /></a>
+        {project.sourceUrl && <a href={project.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">Source code <ArrowUpRight className="size-3.5" /></a>}
+        {project.demoUrl && <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">Live demo <ArrowUpRight className="size-3.5" /></a>}
+      </div>
     </div>
   );
 }
@@ -124,6 +129,11 @@ export function ProjectsSection({ onOpen }: { onOpen?: (id: string) => void }) {
                 {s}
               </Tag>
             ))}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-cyan">
+            <a href={`/work/${p.id}`} className="inline-flex items-center gap-1 hover:underline">{p.id === "queans" ? "Read case study" : "Project details"} <ArrowUpRight className="size-3.5" /></a>
+            {p.sourceUrl && <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">Source code <ArrowUpRight className="size-3.5" /></a>}
+            {p.demoUrl && <a href={p.demoUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">Live demo <ArrowUpRight className="size-3.5" /></a>}
           </div>
           {onOpen && (
             <button

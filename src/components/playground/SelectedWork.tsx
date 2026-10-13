@@ -1,7 +1,8 @@
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight, ArrowRight, Github, Linkedin } from "lucide-react";
-import { PROJECTS, PROFILE, SOCIALS } from "@/data/portfolio";
+import { CASE_STUDIES, PROJECTS, PROFILE, SOCIALS } from "@/data/portfolio";
 import type { ZoneId } from "@/components/3d/zones";
+const apexCase = CASE_STUDIES.find((study) => study.slug === "apex-academy")!;
 export function SelectedWork({ onOpen }: { onOpen: (id: ZoneId) => void }) {
   const reduced = useReducedMotion();
   return (
@@ -20,17 +21,27 @@ export function SelectedWork({ onOpen }: { onOpen: (id: ZoneId) => void }) {
           <br className="desktop-only" /> occasional detour into the unexpected.
         </p>
       </div>
+      <article className="case-study-spotlight">
+        <div>
+          <p className="eyebrow">Full-stack field note</p>
+          <h3>{apexCase.title}</h3>
+          <p>{apexCase.summary}</p>
+        </div>
+        <a href="/work/apex-academy">
+          Read the case study <ArrowUpRight size={17} />
+        </a>
+      </article>
       <div className="project-grid">
         {PROJECTS.map((project, i) => (
-          <motion.button
+          <motion.article
             key={project.id}
             className={`project-card project-${project.id}`}
-            onClick={() => onOpen(project.id as ZoneId)}
             initial={reduced ? false : { opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.15 }}
             transition={{ duration: 0.5, delay: (i % 2) * 0.08 }}
           >
+            <button className="project-preview" onClick={() => onOpen(project.id as ZoneId)} aria-label={`Explore ${project.name} in the island` }>
             <div className="project-art" aria-hidden="true">
               {project.id === "queans" ? (
                 <div className="paper-stack">
@@ -73,7 +84,13 @@ export function SelectedWork({ onOpen }: { onOpen: (id: ZoneId) => void }) {
               <h3>{project.id === "rag" ? "Conversational RAG Agent" : project.name}</h3>
               <p>{project.stack.slice(0, 3).join(" / ")}</p>
             </div>
-          </motion.button>
+            </button>
+            <div className="project-links">
+              <a href={`/work/${project.id}`}>{project.id === "queans" ? "Read case study" : "Project details"} <ArrowRight size={14} /></a>
+              {project.sourceUrl && <a href={project.sourceUrl} target="_blank" rel="noopener noreferrer">Source code <ArrowUpRight size={14} /></a>}
+              {project.demoUrl && <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">Live demo <ArrowUpRight size={14} /></a>}
+            </div>
+          </motion.article>
         ))}
       </div>
       <section className="about-strip">

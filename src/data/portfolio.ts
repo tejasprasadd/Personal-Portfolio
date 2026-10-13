@@ -7,6 +7,24 @@ export type Project = {
   stack: string[];
   pipeline?: string[];
   visual: string;
+  sourceUrl?: string;
+  demoUrl?: string;
+};
+
+export type CaseStudy = {
+  slug: string;
+  title: string;
+  area: string;
+  summary: string;
+  problem: string;
+  contribution: string;
+  flow: string[];
+  decisions: string[];
+  validation: string;
+  outcome: string;
+  stack: string[];
+  sourceUrl?: string;
+  demoUrl?: string;
 };
 
 export type ExperienceItem = {
@@ -110,6 +128,7 @@ export const PROJECTS: Project[] = [
       "Path Planning",
     ],
     pipeline: ["Sense", "Force Field", "Avoid", "Plan Path", "Steer"],
+    sourceUrl: "https://github.com/tejasprasadd/Motion-Algorithm-EV",
   },
   {
     id: "rag",
@@ -133,6 +152,7 @@ export const PROJECTS: Project[] = [
       "RAG",
     ],
     pipeline: ["Upload PDFs", "Chunk", "Embed", "Vector Search", "Answer"],
+    sourceUrl: "https://github.com/tejasprasadd/RAG-Multiple-PDF",
   },
   {
     id: "edulens",
@@ -154,6 +174,51 @@ export const PROJECTS: Project[] = [
       "Data Visualization",
     ],
     pipeline: ["Records", "Clean", "Model", "Visualize", "Insights"],
+    sourceUrl: "https://github.com/tejasprasadd/EduLens-RNSIT--Academic-Data-Analytics",
+  },
+];
+
+export const CASE_STUDIES: CaseStudy[] = [
+  {
+    slug: "queans",
+    title: "QueANS",
+    area: "AI engineering · document intelligence",
+    summary: "Turning educational PDFs into question banks with a review step for uncertain AI output.",
+    problem:
+      "Educational PDFs need to become usable, structured questions. OCR and language model output can be incomplete or uncertain, so the processing flow needs a way to catch questionable results before they enter a question bank.",
+    contribution:
+      "I created the end-to-end platform and designed the document ingestion and processing workflow, including OCR, LLM extraction, confidence evaluation, duplicate detection, quality gating, and human review.",
+    flow: ["PDF upload", "R2 storage", "OCR", "LLM extraction", "Confidence evaluation", "Human review", "Question bank"],
+    decisions: [
+      "Route low-confidence extraction to human review instead of treating every model response as final.",
+      "Use Temporal workflows and durable retries to keep asynchronous document processing resilient.",
+      "Detect duplicates and apply quality gates before accepting extracted questions.",
+    ],
+    validation:
+      "Confidence evaluation, duplicate detection, quality gating, and human review check output before questions are accepted. Public automated test coverage and benchmark data are not available.",
+    outcome:
+      "The platform provides an end-to-end path from educational PDFs to structured question banks. No accuracy or throughput improvement is claimed without a measured benchmark.",
+    stack: ["TypeScript", "Fastify", "Temporal", "PostgreSQL", "Prisma", "Cloudflare R2", "Mistral OCR"],
+  },
+  {
+    slug: "apex-academy",
+    title: "Apex Academy platform",
+    area: "Full-stack engineering · multi-tenant systems",
+    summary: "An education management platform designed to serve multiple institutions with isolated users and data.",
+    problem:
+      "Multiple educational institutions needed to share one product without exposing one organization’s users or data to another.",
+    contribution:
+      "As a Full Stack Developer Intern, I built the Next.js platform, configured BetterAuth and OAuth2 authentication, developed Hono REST APIs on Supabase, and modeled the database with Drizzle ORM.",
+    flow: ["Next.js interface", "BetterAuth / OAuth2", "Hono API", "Organization scope", "Supabase data"],
+    decisions: [
+      "Keep organization boundaries in the application and data access flow rather than relying on the interface alone.",
+      "Use Drizzle ORM to keep database models and application code type aligned.",
+    ],
+    validation:
+      "The documented implementation includes authenticated access and organization-level user and data isolation. A public test suite and client code are not available to inspect.",
+    outcome:
+      "The platform supports multiple institutions in one application with separated users and data. No institution count or performance result is published.",
+    stack: ["Next.js", "TypeScript", "BetterAuth", "OAuth2", "Hono.js", "Supabase", "Drizzle ORM"],
   },
 ];
 

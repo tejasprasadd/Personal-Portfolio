@@ -14,9 +14,11 @@ import {
   MoveUpRight,
   Sun,
   Moon,
+  FileText,
+  Mail,
 } from "lucide-react";
 import { MotionConfig } from "motion/react";
-import { PROFILE, PROJECTS } from "@/data/portfolio";
+import { PROJECTS, SOCIALS } from "@/data/portfolio";
 import { ZONES, type ZoneId } from "@/components/3d/zones";
 import type { Telemetry } from "@/components/3d/Scene";
 import { PanelRouter } from "@/components/experience/PanelRouter";
@@ -39,7 +41,7 @@ import { seedTier, useQualityScaler } from "@/hooks/useQualityScaler";
 import { RESUME_URL, RESUME_FILENAME } from "@/lib/resume";
 const Scene = lazy(() => import("@/components/3d/Scene"));
 const DESCRIPTION =
-  "Interactive portfolio of B R Tejas Prasad, an AI-focused Software Engineer building full-stack applications, AI agents, RAG systems, document intelligence platforms, and scalable software systems.";
+  "Interactive portfolio of B R Tejas Prasad, a Bengaluru engineer seeking AI engineering and full-stack roles. Explore document intelligence, RAG, secure product systems, and a 3D island.";
 
 const SITE = "https://tejas-playground.tejasprasad43.chatgpt.site";
 const OG_IMAGE = `${SITE}/og-preview.jpg`;
@@ -49,7 +51,7 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Tejas — An engineer’s playground | B R Tejas Prasad" },
       { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: "Tejas — B R Tejas Prasad, AI-focused Software Engineer" },
+      { property: "og:title", content: "Tejas — AI & Full-Stack Engineer in Bengaluru" },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "profile" },
       { property: "og:url", content: `${SITE}/` },
@@ -57,7 +59,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
       {
         name: "twitter:title",
-        content: "Tejas — B R Tejas Prasad, AI-focused Software Engineer",
+        content: "Tejas — AI & Full-Stack Engineer in Bengaluru",
       },
       { name: "twitter:description", content: DESCRIPTION },
       { name: "twitter:image", content: OG_IMAGE },
@@ -71,7 +73,7 @@ export const Route = createFileRoute("/")({
           "@context": "https://schema.org",
           "@type": "Person",
           name: "B R Tejas Prasad",
-          jobTitle: "AI-focused Software Engineer",
+          jobTitle: "AI and Full-Stack Software Engineer",
           address: { "@type": "PostalAddress", addressLocality: "Bengaluru", addressCountry: "IN" },
           email: "mailto:tejasprasad43@gmail.com",
           sameAs: [
@@ -91,7 +93,10 @@ function Index() {
   const [exploring, setExploring] = useState(false),
     [optIn, setOptIn] = useState(false),
     [failed, setFailed] = useState(false),
-    [ready, setReady] = useState(false);
+    [ready, setReady] = useState(false),
+    [requested3D, setRequested3D] = useState(false),
+    [pendingDrive, setPendingDrive] = useState(false),
+    [pendingMissionZone, setPendingMissionZone] = useState<ZoneId | null>(null);
   const [openZone, setOpenZone] = useState<ZoneId | null>(null),
     [nearZone, setNearZone] = useState<ZoneId | null>(null),
     [help, setHelp] = useState(false),
@@ -142,8 +147,27 @@ function Index() {
   const onReady = useCallback(() => setReady(true), []),
     onFailure = useCallback(() => {
       setFailed(true);
-      setExploring(false);
-    }, []);
+      setPendingDrive(false);
+      if (missions.activeStep) setOpenZone(missions.activeStep.zone);
+      else setExploring(false);
+    }, [missions.activeStep]);
+  useEffect(() => {
+    if (!pendingDrive || !ready) return;
+    setPendingDrive(false);
+    setExploring(true);
+    setMissionPaused(true);
+    unlock("system_booted");
+  }, [pendingDrive, ready, unlock]);
+  useEffect(() => {
+    if (!pendingDrive || !caps.ready || caps.webgl) return;
+    setPendingDrive(false);
+    toast("3D is unavailable here. You can explore the work below.");
+  }, [pendingDrive, caps.ready, caps.webgl, toast]);
+  useEffect(() => {
+    if (!caps.ready || !pendingMissionZone) return;
+    if (!caps.webgl) setOpenZone(pendingMissionZone);
+    setPendingMissionZone(null);
+  }, [caps.ready, caps.webgl, pendingMissionZone]);
   const openPanel = useCallback(
     (id: ZoneId) => {
       setOpenZone(id);
@@ -182,11 +206,18 @@ function Index() {
     },
     onToggleMute: () => update({ sound: !settings.sound }),
   });
-  const can3D = caps.ready && caps.webgl && !failed && (!caps.lowPower || optIn);
+  const can3D = requested3D && caps.ready && caps.webgl && !failed && (!caps.lowPower || optIn);
   const startDrive = () => {
     if (settings.sound || settings.music) void activateDrivingAudio();
-    if (!can3D) {
-      setOptIn(true);
+    if (failed || (caps.ready && !caps.webgl)) {
+      document.getElementById("work")?.scrollIntoView({ behavior: "smooth" });
+      toast("3D is unavailable here. The work is just below.");
+      return;
+    }
+    setRequested3D(true);
+    setOptIn(true);
+    if (!ready) {
+      setPendingDrive(true);
       return;
     }
     setExploring(true);
@@ -195,13 +226,15 @@ function Index() {
   };
   const startMission = (id: MissionId) => {
     if (settings.sound || settings.music) void activateDrivingAudio();
-    if (caps.lowPower) setOptIn(true);
+    setRequested3D(true);
+    setOptIn(true);
     missions.start(id);
     setMissionPaused(false);
     setMissionPicker(false);
     setExploring(true);
     unlock("system_booted");
     if (failed || (caps.ready && !caps.webgl)) setOpenZone(MISSIONS[id].steps[0]!.zone);
+    else if (!caps.ready) setPendingMissionZone(MISSIONS[id].steps[0]!.zone);
   };
   const resumeMission = () => {
     if (!missions.state.active || !missions.activeStep) {
@@ -209,10 +242,12 @@ function Index() {
       return;
     }
     if (settings.sound || settings.music) void activateDrivingAudio();
-    if (caps.lowPower) setOptIn(true);
+    setRequested3D(true);
+    setOptIn(true);
     setMissionPaused(false);
     setExploring(true);
     if (failed || (caps.ready && !caps.webgl)) setOpenZone(missions.activeStep.zone);
+    else if (!caps.ready) setPendingMissionZone(missions.activeStep.zone);
   };
   const near = ZONES.find((z) => z.id === nearZone);
   const missionTarget = missionPaused ? null : (missions.activeStep?.zone ?? null);
@@ -294,35 +329,39 @@ function Index() {
                   <br />
                   Playful <span>mind.</span>
                 </h1>
+                <p className="hero-role">AI engineering <span>·</span> Full-stack engineering <span>·</span> Bengaluru, India</p>
                 <p className="hero-intro">
-                  I’m Tejas. I build AI systems and software
-                  <br className="desktop-only" /> that turn complex problems into
-                  <br className="desktop-only" /> useful, human experiences.
+                  I’m Tejas. I build reliable AI systems and full-stack software that turn complex problems into useful experiences.
                 </p>
-                <div className="hero-actions">
-                  <button
-                    className="primary-action"
-                    onClick={missions.state.active ? resumeMission : () => setMissionPicker(true)}
-                  >
-                    <Compass size={18} />
-                    {missions.state.active ? "Resume guided mission" : "Start a guided mission"}
-                    <ArrowRight size={17} />
+                <div className="hero-routes" aria-label="Choose a role-focused route">
+                  <button onClick={() => startMission("ai")}>
+                    <span>01 / Guided route</span>
+                    <strong>AI engineering</strong>
+                    <ArrowUpRight size={17} />
                   </button>
+                  <button onClick={() => startMission("fullstack")}>
+                    <span>02 / Guided route</span>
+                    <strong>Full-stack systems</strong>
+                    <ArrowUpRight size={17} />
+                  </button>
+                </div>
+                <div className="hero-actions">
+                  {missions.state.active && <button className="secondary-action" onClick={resumeMission}><Compass size={15} /> Resume your mission <ArrowRight size={15} /></button>}
                   <button
                     className="secondary-action"
                     onClick={startDrive}
-                    disabled={(can3D && !ready) || failed || (caps.ready && !caps.webgl)}
+                    disabled={pendingDrive}
                   >
-                    {can3D
-                      ? ready
-                        ? "Free drive"
-                        : "Preparing your jeep…"
-                      : "Try the 3D experience"}
+                    {pendingDrive ? "Preparing the island…" : "Free drive in 3D"}
                     <MoveUpRight size={15} />
                   </button>
-                  <a className="text-link" href="#work">
-                    Or, straight to the work <ArrowDown size={15} />
+                  <a className="text-link" href="/portfolio">
+                    Read the portfolio <ArrowRight size={15} />
                   </a>
+                </div>
+                <div className="hero-quicklinks">
+                  <a href={RESUME_URL} target="_blank" rel="noopener noreferrer" download={RESUME_FILENAME}><FileText size={15} /> Résumé</a>
+                  <a href={`mailto:${SOCIALS.email}`}><Mail size={15} /> Contact</a>
                 </div>
                 <div className="location-note">
                   <span>BASED IN BENGALURU, INDIA</span>
@@ -346,7 +385,7 @@ function Index() {
                 <span>
                   {failed || !caps.webgl
                     ? "Lightweight view · Explore the projects below"
-                    : !can3D
+                    : !requested3D
                       ? "Lightweight view · 3D is optional"
                       : "Drag to look around · Click a landmark"}
                 </span>

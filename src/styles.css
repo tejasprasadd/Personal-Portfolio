@@ -415,8 +415,8 @@ a:focus-visible {
   background: #ffffff70;
 }
 .hero {
-  min-height: 800px;
-  height: 100svh;
+  min-height: 920px;
+  height: max(920px, 100svh);
   max-height: 1120px;
   position: relative;
   isolation: isolate;
@@ -427,7 +427,7 @@ a:focus-visible {
   position: absolute;
   inset: 7% -7% 8% 23%;
   z-index: -1;
-  animation: scene-enter 1.3s ease-out both;
+  animation: none;
 }
 .scene-stage canvas {
   touch-action: pan-y;
@@ -472,10 +472,11 @@ a:focus-visible {
 }
 .hero-copy {
   position: absolute;
-  top: 25.5%;
+  top: 19%;
   left: 7%;
-  width: 41%;
+  width: 46%;
   pointer-events: none;
+  background: linear-gradient(90deg, #dbe6dd 0%, #dbe6ddf5 82%, #dbe6dd00 100%);
 }
 .hero-copy a,
 .hero-copy button {
@@ -508,7 +509,7 @@ a:focus-visible {
   font-weight: 500;
   letter-spacing: -0.066em;
   line-height: 1.035;
-  margin: 0 0 28px;
+  margin: 0 0 20px;
   white-space: nowrap;
 }
 .hero h1 span {
@@ -522,15 +523,85 @@ a:focus-visible {
   font-size: 14px;
   line-height: 1.85;
   color: #586b5e;
-  max-width: 355px;
+  max-width: 440px;
   margin: 0;
 }
+.hero-role {
+  margin: 0 0 14px;
+  color: #385e49;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.8;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.hero-role span { color: #ad6b4d; padding: 0 3px; }
+.hero-routes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(520px, 100%);
+  margin-top: 23px;
+}
+.hero-routes button {
+  position: relative;
+  display: flex;
+  min-height: 83px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 13px 36px 14px 15px;
+  border: 1px solid #86a292;
+  border-left: 3px solid #4e94a6;
+  border-radius: 6px;
+  background: #f9faf0e8;
+  box-shadow: 0 5px 15px #2447320b;
+  color: #294738;
+  text-align: left;
+  transition: transform .2s, border-color .2s, background .2s;
+}
+.hero-routes button:nth-child(2) { border-left-color: #c1714f; }
+.hero-routes button:hover { transform: translateY(-2px); background: #fffdf3; border-color: #3b7058; }
+.hero-routes button > span {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #6e8575;
+}
+.hero-routes button strong { font-size: 12px; font-weight: 600; }
+.hero-routes button svg { position: absolute; right: 13px; bottom: 14px; }
 .hero-actions {
   display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 19px;
-  margin-top: 32px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 13px 24px;
+  margin-top: 18px;
+}
+.hero-quicklinks {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 18px;
+}
+.hero-quicklinks a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #315842;
+  font-size: 11px;
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+.hero-quicklinks a:hover { color: #a26043; }
+.hero-routes button:focus-visible,
+.hero-quicklinks a:focus-visible,
+.project-links a:focus-visible,
+.project-preview:focus-visible,
+.case-study-spotlight a:focus-visible {
+  outline: 3px solid #145f77;
+  outline-offset: 3px;
 }
 .primary-action {
   display: inline-flex;
@@ -709,7 +780,24 @@ a:focus-visible {
   padding: 100px 7% 0;
   max-width: 1560px;
   margin: auto;
+  scroll-margin-top: 24px;
 }
+.case-study-spotlight {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 36px;
+  padding: 25px 28px;
+  border: 1px solid #a8b9ad;
+  border-left: 4px solid #b9724d;
+  border-radius: 8px;
+  background: #ebf0e4;
+}
+.case-study-spotlight .eyebrow { color: #8f7059; margin: 0 0 6px; }
+.case-study-spotlight h3 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
+.case-study-spotlight p:not(.eyebrow) { max-width: 610px; margin: 0; color: #64786a; font-size: 12px; line-height: 1.65; }
+.case-study-spotlight a { display: inline-flex; align-items: center; flex: none; gap: 8px; color: #365e49; font-size: 11px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -748,6 +836,10 @@ a:focus-visible {
   border: 0;
   color: var(--pine);
 }
+.project-preview { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+.project-links { display: flex; flex-wrap: wrap; gap: 9px 20px; margin-top: 14px; }
+.project-links a { display: inline-flex; align-items: center; gap: 5px; color: #436d56; font-size: 11px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.project-links a:hover { color: #a26043; }
 .project-art {
   height: 280px;
   display: flex;
@@ -1588,7 +1680,7 @@ a:focus-visible {
 
 @media (max-width: 760px) {
   .mission-hud {
-    top: 136px;
+    top: 190px;
     width: calc(100% - 32px);
     padding: 11px 13px;
   }
@@ -1665,11 +1757,11 @@ a:focus-visible {
 }
 @media (max-width: 1100px) {
   .hero {
-    min-height: 710px;
+    min-height: 900px;
   }
   .hero-copy {
     left: 6%;
-    top: 27%;
+    top: 19%;
     width: 48%;
   }
   .hero h1 {
@@ -1721,10 +1813,10 @@ a:focus-visible {
 }
 @media (min-width: 761px) and (max-height: 860px) {
   .hero {
-    min-height: 700px;
+    min-height: 900px;
   }
   .hero-copy {
-    top: 17%;
+    top: 14%;
   }
   .hero-copy > .eyebrow {
     margin-bottom: 18px;
@@ -1768,18 +1860,23 @@ a:focus-visible {
   .site-header nav button:first-child {
     display: none;
   }
+  .site-header nav a { display: none; }
   .resume-link {
-    display: none;
+    display: inline-flex;
+    gap: 4px;
+    padding: 8px 9px;
+    font-size: 10px;
   }
   .hero {
-    height: 920px;
+    height: max(950px, 100svh);
     min-height: 0;
     max-height: none;
   }
   .hero-copy {
-    top: 123px;
+    top: 114px;
     left: 7%;
     width: 86%;
+    background: none;
   }
   .hero-copy > .eyebrow {
     font-size: 8px;
@@ -1787,17 +1884,24 @@ a:focus-visible {
   }
   .hero h1 {
     font-size: clamp(44px, 10vw, 68px);
-    margin-bottom: 20px;
+    margin-bottom: 15px;
   }
+  .hero-role { font-size: 9px; line-height: 1.6; margin-bottom: 9px; }
   .hero-intro {
     font-size: 12px;
     line-height: 1.8;
-    max-width: 300px;
+    max-width: 340px;
   }
+  .hero-routes { margin-top: 17px; gap: 8px; }
+  .hero-routes button { min-height: 73px; padding: 10px 23px 11px 10px; }
+  .hero-routes button > span { font-size: 7px; }
+  .hero-routes button strong { font-size: 10px; line-height: 1.25; }
+  .hero-routes button svg { right: 7px; bottom: 10px; width: 13px; }
   .hero-actions {
-    margin-top: 24px;
-    gap: 16px;
+    margin-top: 13px;
+    gap: 9px 18px;
   }
+  .hero-quicklinks { margin-top: 12px; }
   .primary-action {
     padding: 13px 15px;
     font-size: 11px;
@@ -1806,7 +1910,7 @@ a:focus-visible {
     display: none;
   }
   .scene-stage {
-    inset: 410px 0 32px 0;
+    inset: 550px 0 32px 0;
   }
   .world-note {
     right: 6%;
@@ -1850,6 +1954,8 @@ a:focus-visible {
   .project-art {
     height: 240px;
   }
+  .case-study-spotlight { display: block; padding: 20px; margin-bottom: 30px; }
+  .case-study-spotlight a { margin-top: 14px; }
   .project-caption h3 {
     font-size: 20px;
   }

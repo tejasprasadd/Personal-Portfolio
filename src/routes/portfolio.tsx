@@ -9,7 +9,7 @@ import {
 } from "@/components/content/Sections";
 import { PROFILE, SOCIALS } from "@/data/portfolio";
 import { RESUME_FILENAME, RESUME_URL } from "@/lib/resume";
-import { Boxes, Download, Github, Linkedin, Mail } from "lucide-react";
+import { ArrowUpRight, Boxes, Download, Github, Linkedin, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/portfolio")({
   head: () => ({
@@ -122,6 +122,14 @@ function StandardPortfolio() {
             <Boxes className="size-3.5" /> 3D world
           </Link>
         </div>
+        <details className="portfolio-mobile-menu relative border-t border-border/50 md:hidden">
+          <summary className="mx-auto max-w-5xl cursor-pointer px-5 py-2.5 font-mono text-[11px] uppercase tracking-widest text-cyan">Jump to a section</summary>
+          <nav aria-label="Mobile sections" className="absolute left-0 right-0 top-full grid grid-cols-2 gap-1 border-b border-border bg-void p-3 shadow-xl">
+            {NAV.map(([id, label]) => (
+              <a key={id} href={`#${id}`} onClick={(event) => event.currentTarget.closest("details")?.removeAttribute("open")} className="rounded px-3 py-2.5 font-mono text-xs text-foreground/85 hover:bg-primary/20 hover:text-cyan">{label}</a>
+            ))}
+          </nav>
+        </details>
       </header>
 
       <main id="main" className="mx-auto max-w-5xl px-5 pb-24">
@@ -133,7 +141,7 @@ function StandardPortfolio() {
             {PROFILE.name}
           </h1>
           <p className="mt-3 font-mono text-sm uppercase tracking-[0.2em] text-violet">
-            {PROFILE.role}
+            AI engineering · Full-stack engineering
           </p>
           <p className="mt-6 max-w-2xl text-base leading-8 text-foreground/85">{PROFILE.intro}</p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -169,6 +177,10 @@ function StandardPortfolio() {
               <Mail className="size-4" /> Email
             </a>
           </div>
+          <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs text-cyan">
+            <a href="/work/queans" className="inline-flex items-center gap-1 hover:underline">AI engineering case study <ArrowUpRight className="size-3.5" /></a>
+            <a href="/work/apex-academy" className="inline-flex items-center gap-1 hover:underline">Full-stack case study <ArrowUpRight className="size-3.5" /></a>
+          </div>
         </section>
 
         <Section id="about" title="About" index="01 / identity">
@@ -178,6 +190,12 @@ function StandardPortfolio() {
           <ExperienceSection />
         </Section>
         <Section id="projects" title="Projects" index="03 / archive">
+          <article className="mb-4 rounded-lg border border-cyan/40 bg-void/55 p-5">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-cyan">Featured full-stack case study</p>
+            <h3 className="mt-2 text-lg font-semibold">Apex Academy platform</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground/80">A multi-tenant education management platform with institution-level user and data isolation, authentication, APIs, and a type-safe database model.</p>
+            <a href="/work/apex-academy" className="mt-4 inline-flex items-center gap-1 font-mono text-xs text-cyan hover:underline">Read case study <ArrowUpRight className="size-3.5" /></a>
+          </article>
           <ProjectsSection />
         </Section>
         <Section id="skills" title="Skills" index="04 / reactor">
